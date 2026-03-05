@@ -22,6 +22,7 @@ class ElmoRageGame {
     this.goal = { x: 730, y: 150, w: 30, h: 30 };
     this.platforms = [];
     this.level3Mode = false;
+    this.lastControls = {};
 
     this.constants = {
       gravity: 0.6,
@@ -32,7 +33,7 @@ class ElmoRageGame {
 
     this.loadLevel(1);
     this.bindEvents();
-    this.gameLoop();
+    this.update(); // Start main loop
   }
 
   getControlSet(level) {
@@ -47,56 +48,236 @@ class ElmoRageGame {
 
   loadLevel(lvl) {
     this.player.dy = 0;
-    this.player.x = 50;
-    this.player.y = 340;
-    this.deathCount = 0;
-    this.wasdTimer = lvl === 3 ? 30 : 0;
-    this.inSikePhase = false;
-    this.level3StartTime = Date.now();
-
-    if (lvl === 1) {
+    
+    if(lvl === 1) {
+      this.player.x = 50; 
+      this.player.y = 340;
       this.platforms = [
-        {x: 0, y: 380, w: 200, h: 10}, {x: 220, y: 330, w: 100, h: 10},
-        {x: 350, y: 280, w: 100, h: 10}, {x: 480, y: 230, w: 100, h: 10},
-        {x: 610, y: 180, w: 150, h: 10}
+        {x:0, y:380, w:200, h:10},
+        {x:220, y:330, w:100, h:10},
+        {x:350, y:280, w:100, h:10},
+        {x:480, y:230, w:100, h:10},
+        {x:610, y:180, w:150, h:10}
       ];
       this.goal = { x: 730, y: 150, w: 30, h: 30 };
-    } else if (lvl === 2) {
+    } else if(lvl === 2) {
+      // FIXED: Player spawns ON first platform
+      this.player.x = 110; 
+      this.player.y = 285; 
       this.platforms = [
-        {x: 100, y: 300, w: 100, h: 15}, {x: 350, y: 250, w: 100, h: 15},
-        {x: 600, y: 200, w: 100, h: 15}
+        {x:100, y:300, w:100, h:15},
+        {x:350, y:250, w:100, h:15},
+        {x:600, y:200, w:100, h:15}
       ];
       this.goal = { x: 750, y: 150, w: 30, h: 30 };
-    } else if (lvl === 3) {
+    } else if(lvl === 3) {
+      this.player.x = 50; 
+      this.player.y = 370; 
       this.platforms = [
-        {x: 0, y: 380, w: 800, h: 10},
-        {x: 720, y: 320, w: 80, h: 10}
+        {x:0, y:380, w:800, h:10},
+        {x:720, y:320, w:80, h:10}
       ];
       this.goal = { x: 750, y: 290, w: 30, h: 30 };
       this.level3Mode = true;
-    } else if (lvl === 4) {
+      this.wasdTimer = 30;
+      this.level3StartTime = Date.now();
+    } else if(lvl === 4) {
+      this.player.x = 50; 
+      this.player.y = 370; 
       this.platforms = [
-        {x: 0, y: 380, w: 250, h: 10}, {x: 300, y: 300, w: 60, h: 10},
-        {x: 420, y: 220, w: 80, h: 10}, {x: 550, y: 300, w: 50, h: 10},
-        {x: 650, y: 380, w: 150, h: 10}
+        {x:0, y:380, w:250, h:10},
+        {x:300, y:300, w:60, h:10},
+        {x:420, y:220, w:80, h:10},
+        {x:550, y:300, w:50, h:10},
+        {x:650, y:380, w:150, h:10}
       ];
       this.goal = { x: 760, y: 350, w: 30, h: 30 };
-    } else if (lvl === 5) {
-      this.platforms = [
-        {x: 0, y: 380, w: 120, h: 10}, {x: 180, y: 300, w: 70, h: 10},
-        {x: 320, y: 220, w: 100, h: 10}, {x: 480, y: 280, w: 60, h: 10},
-        {x: 600, y: 340, w: 80, h: 10}, {x: 720, y: 260, w: 80, h: 10}
-      ];
-      this.goal = { x: 760, y: 230, w: 30, h: 30 };
-    } else if (lvl === 6) {
-      this.platforms = [
-        {x: 0, y: 380, w: 800, h: 10}, {x: 200, y: 280, w: 50, h: 10},
-        {x: 350, y: 200, w: 40, h: 10}, {x: 450, y: 300, w: 60, h: 10},
-        {x: 580, y: 220, w: 50, h: 10}
-      ];
-      this.goal = { x: 720, y: 190, w: 30, h: 30 };
     }
-    // ADD NEW LEVELS HERE - copy pattern above
+    // ADD MORE LEVELS HERE
+  }
+
+  // FIXED: Elmo faces RIGHT (proper player orientation)
+  drawElmo(x, y, w, h) {
+    const ctx = this.ctx;
+    ctx.save();
+    
+    // Move to player position and rotate to face RIGHT
+    ctx.translate(x + w/2, y);
+    ctx.scale(1, -1); // Flip vertically so feet point down
+    
+    // Body (ellipse facing right)
+    ctx.fillStyle = '#e01b22';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w * 0.8, h/2.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Eyes (facing right)
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(-w/3, -h/3, h/5, 0, Math.PI * 2);
+    ctx.arc(w/4, -h/3, h/5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'black';
+    ctx.beginPath();
+    ctx.arc(-w/3, -h/3, h/12, 0, Math.PI * 2);
+    ctx.arc(w/4, -h/3, h/12, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Nose
+    ctx.fillStyle = '#ff9900';
+    ctx.beginPath();
+    ctx.arc(0, -h/2.5, w/4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+  }
+
+  update() {
+    this.updateControls();
+    
+    // Level 2 MOVING WORLD (your original mechanic restored)
+    const controls = this.getControlSet(this.currentLevel);
+    let netLeft = this.keys.left;
+    let netRight = this.keys.right;
+    let jumpPressed = this.keys.jump;
+
+    // J OVERLOAD: Left UNLESS right held
+    if (controls.left === 'j' && controls.jump === 'j') {
+      if (this.keys.left || this.keys.jump) {
+        if (!netRight) netLeft = true;
+        jumpPressed = true;
+      }
+    }
+
+    // LEVEL 2 WORLD MOVEMENT
+    if (this.currentLevel === 2) {
+      if (this.keys.right) { 
+        this.player.x += this.constants.worldSpeed; 
+        this.platforms.forEach(p => p.y -= this.constants.worldSpeed); 
+        this.goal.y -= this.constants.worldSpeed; 
+      }
+      if (this.keys.left) { 
+        this.player.x -= this.constants.worldSpeed; 
+        this.platforms.forEach(p => p.y += this.constants.worldSpeed); 
+        this.goal.y += this.constants.worldSpeed; 
+      }
+      if (this.keys.jump && this.player.onGround) {
+        this.player.dy = this.constants.jumpPower;
+        this.platforms.forEach(p => p.x -= this.constants.worldSpeed);
+        this.goal.x -= this.constants.worldSpeed;
+      }
+    } 
+    // LEVEL 3 DEATH MAZE
+    else if (this.currentLevel === 3) {
+      if (netLeft) return this.respawn(); // LEFT = DEATH
+      if (netLeft && netRight) { netLeft = false; netRight = false; } // BOTH = FROZEN
+      
+      // Side wrap
+      if (this.player.x < -20) this.player.x = 780;
+      if (this.player.x > 800) this.player.x = 0;
+      
+      if (netRight && !netLeft) this.player.x += this.constants.moveSpeed;
+    } 
+    // NORMAL MOVEMENT
+    else {
+      if (netLeft && !netRight) this.player.x -= this.constants.moveSpeed;
+      if (netRight && !netLeft) this.player.x += this.constants.moveSpeed;
+    }
+
+    if (jumpPressed && this.player.onGround) this.player.dy = this.constants.jumpPower;
+    
+    this.player.dy += this.constants.gravity;
+    this.player.y += this.player.dy;
+
+    // FIXED: Better collision detection
+    this.player.onGround = false;
+    this.platforms.forEach(p => {
+      if (this.player.x + this.player.w > p.x && this.player.x < p.x + p.w &&
+          this.player.y + this.player.h > p.y && this.player.y < p.y + 10) {
+        this.player.y = p.y - this.player.h;
+        this.player.dy = 0;
+        this.player.onGround = true;
+      }
+    });
+
+    if (this.player.y > 450) this.respawn();
+    if (this.player.x < 0) this.player.x = 0;
+    if (this.player.x > 780) this.player.x = 780;
+
+    // Goal check
+    const h = this.player.crouching ? this.player.crouchHeight : this.player.standHeight;
+    if (this.player.x < this.goal.x + this.goal.w && 
+        this.player.x + this.player.w > this.goal.x &&
+        this.player.y < this.goal.y + this.goal.h && 
+        this.player.y + h > this.goal.y) {
+      this.nextLevel();
+    }
+
+    this.draw();
+    requestAnimationFrame(() => this.update());
+  }
+
+  updateControls() {
+    const elapsed = (Date.now() - this.level3StartTime) / 1000;
+    if (this.currentLevel === 3 && elapsed > 30 && !this.inSikePhase) {
+      this.inSikePhase = true;
+      this.wasdTimer = 0;
+      document.body.classList.add('sike-flash');
+      setTimeout(() => document.body.classList.remove('sike-flash'), 600);
+    }
+    if (this.currentLevel === 3 && this.wasdTimer > 0) {
+      this.wasdTimer -= 1/60;
+    }
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, 800, 400);
+
+    // HUD (NO CONTROL DISPLAY)
+    ctx.fillStyle = this.deathCount > 10 ? "#ff4444" : "#ffffff";
+    ctx.font = "bold 24px 'Courier New'";
+    ctx.textAlign = 'left';
+    ctx.fillText(`LEVEL ${this.currentLevel} | DEATHS: ${this.deathCount}`, 20, 35);
+    ctx.fillText("NOT WASD - FIGURE IT OUT", 20, 65);
+
+    // Level 3 messages
+    if (this.currentLevel === 3) {
+      const elapsed = (Date.now() - this.level3StartTime) / 1000;
+      if (elapsed < 3) {
+        ctx.fillStyle = "#ffff00";
+        ctx.font = "bold 28px 'Courier New'";
+        ctx.textAlign = 'center';
+        ctx.fillText("🎁 HERE'S A GIFT: WASD! 🎁", 400, 120);
+      } else if (elapsed > 30 && !this.inSikePhase) {
+        ctx.fillStyle = "#ff0000";
+        ctx.font = "bold 36px 'Courier New'";
+        ctx.textAlign = 'center';
+        ctx.fillText("SIKE! 😈", 400, 120);
+      } else if (this.wasdTimer > 0) {
+        ctx.fillStyle = "#00ff00";
+        ctx.font = "bold 20px 'Courier New'";
+        ctx.textAlign = 'left';
+        ctx.fillText(`WASD LEFT: ${Math.ceil(this.wasdTimer)}s`, 20, 100);
+      }
+      ctx.textAlign = 'left';
+    }
+
+    // Platforms
+    ctx.fillStyle = this.level3Mode ? "#ff6666" : "#666666";
+    this.platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+
+    // Goal
+    const gradient = ctx.createLinearGradient(this.goal.x, this.goal.y, this.goal.x + 30, this.goal.y + 30);
+    gradient.addColorStop(0, '#ffd700');
+    gradient.addColorStop(1, '#ffaa00');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(this.goal.x, this.goal.y, this.goal.w, this.goal.h);
+
+    // Elmo
+    const h = this.player.crouching ? this.player.crouchHeight : this.player.standHeight;
+    this.drawElmo(this.player.x, this.player.y, this.player.w, h);
   }
 
   nextLevel() {
@@ -117,168 +298,6 @@ class ElmoRageGame {
     this.loadLevel(this.currentLevel);
   }
 
-  updateControls() {
-    const elapsed = (Date.now() - this.level3StartTime) / 1000;
-    if (this.currentLevel === 3 && elapsed > 30 && !this.inSikePhase) {
-      this.inSikePhase = true;
-      this.wasdTimer = 0;
-      document.body.classList.add('sike-flash');
-      setTimeout(() => document.body.classList.remove('sike-flash'), 600);
-    }
-    if (this.currentLevel === 3 && this.wasdTimer > 0) {
-      this.wasdTimer -= 1/60;
-    }
-  }
-
-  drawElmo(x, y, w, h) {
-    const ctx = this.ctx;
-    ctx.save();
-    
-    ctx.fillStyle = '#e01b22';
-    ctx.beginPath();
-    ctx.arc(x + w/2, y, w * 0.8, h/2, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(x + w/4, y - h/2 + 5, h/5, 0, Math.PI * 2);
-    ctx.arc(x + 3*w/4, y - h/2 + 5, h/5, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = 'black';
-    ctx.beginPath();
-    ctx.arc(x + w/4, y - h/2 + 5, h/12, 0, Math.PI * 2);
-    ctx.arc(x + 3*w/4, y - h/2 + 5, h/12, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = '#ff9900';
-    ctx.beginPath();
-    ctx.arc(x + w/2, y - h/1.8, w/4, h/6, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.restore();
-  }
-
-  update() {
-    this.updateControls();
-    const controls = this.getControlSet(this.currentLevel);
-    
-    let netLeft = this.keys.left;
-    let netRight = this.keys.right;
-    let jumpPressed = this.keys.jump;
-
-    // J OVERLOAD LOGIC
-    if (controls.left === 'j' && controls.jump === 'j') {
-      if (this.keys.left || this.keys.jump) {
-        if (!netRight) netLeft = true;
-        jumpPressed = true;
-      }
-    }
-
-    // LEVEL 3 DEATH MAZE
-    if (this.level3Mode && this.currentLevel === 3) {
-      if (netLeft) return this.respawn();
-      if (netLeft && netRight) { netLeft = false; netRight = false; }
-      
-      if (this.player.x < -20) this.player.x = 780;
-      if (this.player.x > 800) this.player.x = 0;
-    }
-
-    // MOVEMENT
-    if (netLeft && !netRight) this.player.x -= this.constants.moveSpeed;
-    if (netRight && !netLeft) this.player.x += this.constants.moveSpeed;
-    if (jumpPressed && this.player.onGround) this.player.dy = this.constants.jumpPower;
-
-    this.player.dy += this.constants.gravity;
-    this.player.y += this.player.dy;
-
-    this.player.onGround = false;
-    this.platforms.forEach(p => {
-      if (this.player.x + this.player.w > p.x && this.player.x < p.x + p.w &&
-          this.player.y >= p.y && this.player.y - Math.abs(this.player.dy) - 5 <= p.y) {
-        this.player.y = p.y;
-        this.player.dy = 0;
-        this.player.onGround = true;
-      }
-    });
-
-    if (this.player.y > 450) return this.respawn();
-    if (this.player.y < -100) this.player.y = -100;
-
-    // GOAL CHECK
-    const h = this.player.crouching ? this.player.crouchHeight : this.player.standHeight;
-    if (this.player.x < this.goal.x + this.goal.w && this.player.x + this.player.w > this.goal.x &&
-        this.player.y - h < this.goal.y + this.goal.h && this.player.y > this.goal.y) {
-      this.nextLevel();
-    }
-  }
-
-  draw() {
-    const ctx = this.ctx;
-    ctx.clearRect(0, 0, 800, 400);
-
-    // HUD
-    ctx.fillStyle = this.deathCount > 10 ? "#ff4444" : "#ffffff";
-    ctx.font = "bold 22px 'Courier New'";
-    ctx.textAlign = 'left';
-    ctx.fillText(`LEVEL ${this.currentLevel} | DEATHS: ${this.deathCount}`, 20, 35);
-
-    const controls = this.getControlSet(this.currentLevel);
-
-    // LEVEL 3 SPECIAL TEXT
-    if (this.currentLevel === 3) {
-      const elapsed = (Date.now() - this.level3StartTime) / 1000;
-      if (elapsed < 3) {
-        ctx.fillStyle = "#ffff00";
-        ctx.font = "bold 28px 'Courier New'";
-        ctx.textAlign = 'center';
-        ctx.fillText("🎁 HERE'S A GIFT: WASD! 🎁", 400, 120);
-        ctx.textAlign = 'left';
-      } else if (elapsed > 30 && !this.inSikePhase) {
-        ctx.fillStyle = "#ff0000";
-        ctx.font = "bold 36px 'Courier New'";
-        ctx.textAlign = 'center';
-        ctx.fillText("SIKE! 😈", 400, 120);
-        ctx.textAlign = 'left';
-      } else if (this.wasdTimer > 0) {
-        ctx.fillStyle = "#00ff00";
-        ctx.font = "bold 18px 'Courier New'";
-        ctx.fillText(`WASD LEFT: ${Math.ceil(this.wasdTimer)}s`, 20, 70);
-      }
-    }
-
-    // CONTROLS
-    ctx.fillStyle = "#cccccc";
-    ctx.font = "16px 'Courier New'";
-    ctx.textAlign = 'left';
-    ctx.fillText(
-      `Move: ${controls.left.toUpperCase()}/${controls.right.toUpperCase()} Jump: ${controls.jump.toUpperCase()} Crouch: ${controls.crouch.toUpperCase()}`,
-      20, 370
-    );
-    ctx.fillText("5+D Next | 9+A Prev", 20, 390);
-
-    // PLATFORMS
-    ctx.fillStyle = this.level3Mode ? "#ff6666" : "#666666";
-    this.platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
-
-    // GOAL
-    const gradient = ctx.createLinearGradient(this.goal.x, this.goal.y, this.goal.x + 30, this.goal.y + 30);
-    gradient.addColorStop(0, '#ffd700');
-    gradient.addColorStop(1, '#ffaa00');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(this.goal.x, this.goal.y, this.goal.w, this.goal.h);
-
-    // ELMO
-    const h = this.player.crouching ? this.player.crouchHeight : this.player.standHeight;
-    this.drawElmo(this.player.x, this.player.y, this.player.w, h);
-  }
-
-  gameLoop() {
-    this.update();
-    this.draw();
-    requestAnimationFrame(() => this.gameLoop());
-  }
-
   bindEvents() {
     document.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
@@ -287,10 +306,14 @@ class ElmoRageGame {
       if (key === controls.left) this.keys.left = true;
       if (key === controls.right) this.keys.right = true;
       if (key === controls.jump) this.keys.jump = true;
-      if (key === controls.crouch) { this.keys.crouch = true; this.player.crouching = true; }
+      if (key === controls.crouch) { 
+        this.keys.crouch = true; 
+        this.player.crouching = true; 
+      }
       
       if (key === '5') this.keys.key5 = true;
       if (key === '9') this.keys.key9 = true;
+      
       if (this.keys.key5 && key === 'd') this.nextLevel();
       if (this.keys.key9 && key === 'a') {
         this.currentLevel = Math.max(1, this.currentLevel - 1);
@@ -305,7 +328,10 @@ class ElmoRageGame {
       if (key === controls.left) this.keys.left = false;
       if (key === controls.right) this.keys.right = false;
       if (key === controls.jump) this.keys.jump = false;
-      if (key === controls.crouch) { this.keys.crouch = false; this.player.crouching = false; }
+      if (key === controls.crouch) { 
+        this.keys.crouch = false; 
+        this.player.crouching = false; 
+      }
       
       if (key === '5') this.keys.key5 = false;
       if (key === '9') this.keys.key9 = false;
@@ -313,5 +339,4 @@ class ElmoRageGame {
   }
 }
 
-// START GAME
 new ElmoRageGame();
