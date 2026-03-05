@@ -1,0 +1,52 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body { 
+  overflow: hidden; 
+  background: linear-gradient(180deg, #111 0%, #333 100%); 
+  font-family: 'Courier New', monospace;
+  image-rendering: pixelated;
+  transition: all 0.1s ease-out;
+}
+
+canvas { 
+  display: block; 
+  margin: 2rem auto; 
+  background: #000;
+  border: 4px solid #ff4444;
+  box-shadow: 
+    0 0 30px rgba(255,68,68,0.6),
+    inset 0 0 20px rgba(0,0,0,0.8);
+  border-radius: 8px;
+  cursor: none;
+}
+
+body.death-shake {
+  animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+}
+
+body.sike-flash {
+  background: #ff0000 !important;
+  animation: sikePulse 0.6s ease-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-4px, 2px) rotate(-1deg); }
+  40% { transform: translate(4px, -2px) rotate(1deg); }
+  60% { transform: translate(-2px, 4px) rotate(-0.5deg); }
+  80% { transform: translate(2px, -1px) rotate(0.5deg); }
+}
+
+@keyframes sikePulse {
+  0% { filter: brightness(2) hue-rotate(0deg); }
+  50% { filter: brightness(1.5) hue-rotate(0deg); }
+  100% { filter: brightness(1) hue-rotate(0deg); }
+}
+
+@media (max-width: 850px) {
+  canvas { margin: 1rem auto; }
+}
